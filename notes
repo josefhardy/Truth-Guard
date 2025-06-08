@@ -1,0 +1,40 @@
+possible backend technologies: 
+**Java**: Spring Boot
+**C#**: ASP.NET Core
+**Python**: Flask, FastAPI, or Django
+
+TASKS:
+  - install npm(what is npm?)
+  - build a endpoint that accepts this request: 
+
+POST /api/detect-fake-news
+{
+  "url": "https://example.com/article"
+}
+
+  and get this response: 
+
+{
+  "isReliable": true,
+  "confidence": 85,
+  "reasoning": [
+    "Source is from a well-established news organization",
+    "Content shows high factual accuracy"
+  ],
+  "sourceCredibility": 90,
+  "factualAccuracy": 88,
+  "biasScore": 25,
+  "analysisDetails": {
+    "domain": "example.com",
+    "publishDate": "2024-01-15",
+    "author": "John Smith",
+    "wordCount": 1250
+  }
+}
+
+  - URL Validation
+  - webscraping for article content 
+  - domain analysis(source credibility)
+  - content analysis
+  - scoring alogorithm 
+  - error handling
