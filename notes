@@ -35,6 +35,8 @@ POST /api/detect-fake-news
   - URL Validation
   - webscraping for article content 
   - domain analysis(source credibility)
+  - logging and monitoring(debugging purposes)
   - content analysis
   - scoring alogorithm 
   - error handling
+  - api rate limiting
