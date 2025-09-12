@@ -122,17 +122,45 @@ def fetch_author(url, soup):
         return f"Error: {e}"
 
 def fetch_title(url, soup):
-
-    if res.status_code != 200:
-        print(f"Error fetching article title:{res.status_code}")
-
         meta_title = (
-            soup.find("meta", {"name" :"title"})
-            or soup.find("meta", {"property": "article:title"})
+            soup.find("meta", {"property": "og:title"})
+            or soup.find("meta", {"property": "twitter:title"})
             )
         if meta_title and meta_title.get("content"):
             return meta_title["content"]
-            
+
+def fetch_date(url, soup):
+    for script in soup.findall("script", type = "application/ld+json"):
+
+        try:
+            data = json.loads(script.string)
+
+            if isinstance(data, list):
+                for item in data:
+                    if isinstance(item, dict) and "dataPublished" in item:
+                        return item["datePubliched"]
+            elif isinstance(data, dict):
+                if "datePublished" in date:
+                        return data["datePublished"]
+        except:
+            continue 
+
+
+    meta_date = (
+            soup.find("meta", {"property":"article:published_time"})
+            or soup.find("meta", {"property":"og:updated_time"})
+            or soup.find("meta", {"name": "date"})
+        )
+    if meta_date and meta_date.get("content"):
+        return meta_date["content"]
+
+    time_tag = soup.find("time")
+    if time_tag:
+        if time_tag.get("datetime"):
+            return time_tag["datetime"]
+        else:
+            return time_tag.get_text(strip = True)
+    return "Date not found"
     
 
 
@@ -151,9 +179,10 @@ headers = {
 res = requests.get(url, headers = headers, timeout = 10)
 
 if res.status_code != 200:
-    print(f"Error fetching article title:{req.status_code}")
+    print(f"Error fetching article title:{res.status_code}")
 
 soup = BeautifulSoup(res.text, "html.parser")
 
-print(f"->Title: {fetch_title(url, soup)}")
+print(f"-> Title: {fetch_title(url, soup)}")
 print("-> Author:", fetch_author(url, soup))
+print(f"-> Date: {fetch_date(url, soup)}")
