@@ -33,10 +33,11 @@ POST /api/detect-fake-news
 }
 
   - URL Validation
-  - webscraping for article content 
+  - webscraping for article content - done 
   - domain analysis(source credibility)
   - logging and monitoring(debugging purposes)
   - content analysis
   - scoring alogorithm 
   - error handling
   - api rate limiting
+  okay lest 
