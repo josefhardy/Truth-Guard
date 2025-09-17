@@ -41,3 +41,5 @@ POST /api/detect-fake-news
   - error handling
   - api rate limiting
   okay lest 
+
+make it so that co.uk and aother well known tlds return 20 points and not 12 also make it so that if age isnt foundn then age is removed form affecting the score 
