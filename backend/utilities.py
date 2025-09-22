@@ -1,3 +1,5 @@
+from curses import raw
+from turtle import back
 from urllib.parse import urlparse
 import requests
 import ipaddress
@@ -5,6 +7,8 @@ import tldextract
 import time
 import whois
 import datetime
+import backend.scraper
+from bs4 import BeautifulSoup
 
 # -----------------------------
 # Simple TLD cache
@@ -139,6 +143,10 @@ def domain_analysis(url, safe_browsing_api_key=None):
     weights = {"https": 20, "tld": 25, "patterns": 25, "age": 30}
     parsed = urlparse(url)
 
+    # Start with full denominator
+    denominator = sum(weights.values())
+    whois_failed = False
+
     # HTTPS check
     if parsed.scheme == "https":
         score += weights["https"]
@@ -163,9 +171,10 @@ def domain_analysis(url, safe_browsing_api_key=None):
     print(f"{pattern_msg} = {pattern_score} points\n")
 
     # WHOIS domain age
-    ext = tldextract.extract(url)
-    domain = f"{ext.domain}.{ext.suffix}"
+    age_score = None
     try:
+        ext = tldextract.extract(url)
+        domain = f"{ext.domain}.{ext.suffix}"
         w = whois.whois(domain)
         creation_date = None
         if hasattr(w, "creation_date"):
@@ -184,11 +193,7 @@ def domain_analysis(url, safe_browsing_api_key=None):
             except Exception:
                 creation_date = None
 
-        if not creation_date:
-            age_score = 15
-            age = 1
-            print("No creation date found; defaulting to 1 year -> 15 points\n")
-        else:
+        if creation_date:
             age = (datetime.datetime.now() - creation_date).days / 365.25
             if age < 0.5:
                 age_score = 5
@@ -203,17 +208,34 @@ def domain_analysis(url, safe_browsing_api_key=None):
             else:
                 age_score = 30
             print(f"site age: {age:.2f} years = {age_score} points\n")
+        else:
+            raise ValueError("No creation date found")
     except Exception as e:
-        age_score = 15
-        print(f"WHOIS lookup failed, neutral score ({e}) -> 15 points\n")
+        print(f"WHOIS lookup failed -> removing age factor ({e})\n")
+        denominator -= weights["age"]
+        whois_failed = True
 
-    score += int(weights["age"] * age_score / 30)
-    return score
+    # Only add age if available
+    if age_score is not None:
+        score += int(weights["age"] * age_score / 30)
 
+    # Convert to percentage
+    percentage = (score / denominator) * 100
+
+    # Apply 10% deduction if WHOIS failed
+    if whois_failed:
+        percentage *= 0.9
+        print("⚠️ WHOIS failed → 10% penalty applied\n")
+
+    return round(percentage, 2)
 # -----------------------------
 # -----------------------------
 # Example usage
 # -----------------------------
+
+def clean_text(raw_text):
+    for nav in soup.findall('nav'):
+        nav.decompose()
 safe_browsing_api_key = "AIzaSyDew5sveLuhqBrJQ-Aa72aTvTG3SWIc7I0"
 
 url = "https://www.bbc.co.uk/news/articles/c5y8r2gk0vyo"
@@ -225,3 +247,14 @@ print(isValid, ": ", response, "\n")
 if isValid:
     final_score = domain_analysis(response, safe_browsing_api_key)
     print(f"\n🌐 Final domain analysis score: {final_score}/100")
+
+res = requests.get(url, headers=headers, timeout=10)
+if res.status_code != 200:
+    print(f"Error fetching article: {res.status_code}")
+
+# Parse HTML with BeautifulSoup
+soup = BeautifulSoup(res.text, "html.parser")
+
+raw_text = backend.scraper.fetch_body(url, soup)
+
+cleaned_text = clean_text(raw_text)
