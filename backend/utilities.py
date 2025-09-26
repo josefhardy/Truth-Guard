@@ -1,4 +1,3 @@
-from curses import raw
 from turtle import back
 from urllib.parse import urlparse
 import requests
@@ -7,7 +6,9 @@ import tldextract
 import time
 import whois
 import datetime
-import backend.scraper
+import scraper as scraper 
+import re
+import unicodedata
 from bs4 import BeautifulSoup
 
 # -----------------------------
@@ -233,9 +234,35 @@ def domain_analysis(url, safe_browsing_api_key=None):
 # Example usage
 # -----------------------------
 
-def clean_text(raw_text):
-    for nav in soup.findall('nav'):
-        nav.decompose()
+def clean_text(raw_html):
+    # Store raw text for debugging
+    raw_text = raw_html
+
+    # Parse HTML
+    soup = BeautifulSoup(raw_html, "html.parser")
+
+    # Remove unwanted elements by tag
+    for tag in ['nav', 'aside', 'footer', 'form', 'header', 'noscript', 'script', 'style']:
+        for el in soup.find_all(tag):
+            el.decompose()
+
+    # Remove elements by common class or id patterns
+    patterns = re.compile(r"(menu|nav|share|ad|footer|header|sidebar|promo|cookie|banner|subscribe|social)", re.I)
+    for el in soup.find_all(attrs={"class": patterns}):
+        el.decompose()
+    for el in soup.find_all(attrs={"id": patterns}):
+        el.decompose()
+
+    # Get text and normalize whitespace
+    text = soup.get_text(separator=' ', strip=True)
+    text = re.sub(r'\s+', ' ', text)
+
+    # Normalize unicode (fixes things like “Â£” for “£”)
+    text = unicodedata.normalize("NFKC", text)
+    text = text.encode("latin1", errors="ignore").decode("utf-8", errors="ignore")
+
+    return text
+
 safe_browsing_api_key = "AIzaSyDew5sveLuhqBrJQ-Aa72aTvTG3SWIc7I0"
 
 url = "https://www.bbc.co.uk/news/articles/c5y8r2gk0vyo"
@@ -245,16 +272,21 @@ isValid, response = validator(url, headers)
 print(isValid, ": ", response, "\n")
 
 if isValid:
-    final_score = domain_analysis(response, safe_browsing_api_key)
-    print(f"\n🌐 Final domain analysis score: {final_score}/100")
+    #final_score = domain_analysis(response, safe_browsing_api_key)
+    #print(f"\n🌐 Final domain analysis score: {final_score}/100")
+    print()
 
 res = requests.get(url, headers=headers, timeout=10)
 if res.status_code != 200:
     print(f"Error fetching article: {res.status_code}")
 
+
 # Parse HTML with BeautifulSoup
 soup = BeautifulSoup(res.text, "html.parser")
 
-raw_text = backend.scraper.fetch_body(url, soup)
+raw_text = scraper.fetch_body(url, soup)
 
 cleaned_text = clean_text(raw_text)
+
+print("This is the clean txt")
+print(cleaned_text)
